@@ -74,4 +74,13 @@ for subtitlePath in tqdm(subtitlePaths):
     indexes = []
     timestamps = []
     textBlocks = []
-    block = []   
+    block = []
+
+    try:
+        with open(subtitlePath, "r", encoding=encoding) as f:
+                content = f.readlines()
+    except:
+        # GBK causes issues
+        with open(subtitlePath, "r", encoding='GBK') as f:
+                content = f.readlines()
+        pass
