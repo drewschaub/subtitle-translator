@@ -13,6 +13,8 @@ if the user wants to translate all Japanese ```.srt``` files than those need to 
 桜の塔 S01E06.Japanese.srt
 ```
 
+If the user is using a DeepL Pro account they may choose to store the API key in their ```config.ini``` file. However, for security reasons the user may also have ```translate.py``` prompt them for their auth key by setting ```apiAuthKeyPrompt = True``` in ```config.ini``` under ```[SERVICES]```. 
+
 ## Current Support
 
 Subtitles containing chinese or japanese text may be encoded in many different formats which may cause issues when trying to translate. This program detects the underlying file encoding of each subtitle file in a folder and do bulk translation. 
