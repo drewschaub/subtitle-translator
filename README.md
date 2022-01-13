@@ -3,6 +3,18 @@ translate subtitles between english, japanese and chinese
 
 This serves to automate subtitle translation for media server use. 
 
+## Directions
+
+In the ```config.ini``` file specify the location of your subtitles. It's setup assuming it's for media server use, so includes support for nested folder searching. The user can specify the same input and output path locations if desired, allowing the user to translate all existing subtitles files in their current media path. The subtitles to be translated need to include the input subtitle language.
+
+if the user wants to translate all Japanese ```.srt``` files than those need to include ```.Japanese```, ```.ja```, or ```.jpn``` in their filenames to be detected by the system. The full list of language representations can be found in ISO 639.2 and listed here for reference: [https://www.loc.gov/standards/iso639-2/php/code_list.php](https://www.loc.gov/standards/iso639-2/php/code_list.php). For example, in the folder ```桜の塔 (2021)/Season 01```, ```translator.py``` would detect and translate the following file as it specifies the language in the file name:
+
+```
+桜の塔 S01E06.Japanese.srt
+```
+
+## Current Support
+
 Subtitles containing chinese or japanese text may be encoded in many different formats which may cause issues when trying to translate. This program detects the underlying file encoding of each subtitle file in a folder and do bulk translation. 
 
 Supported encodings include: 
