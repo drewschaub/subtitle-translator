@@ -1,7 +1,10 @@
 import configparser
 from pathlib import Path
+import re
 from tqdm import tqdm
 from chardet.universaldetector import UniversalDetector
+
+RGX_INDEX = r"-?[0-9]+\.?[0-9]*"
 
 def translateDeepL(job_configuration, inputText):
     """ Translate text with DeepL
@@ -84,3 +87,8 @@ for subtitlePath in tqdm(subtitlePaths):
         with open(subtitlePath, "r", encoding='GBK') as f:
                 content = f.readlines()
         pass
+
+    blockCount = 0
+    block = ['','','']
+    for line in content:
+        print(len(line.split()
