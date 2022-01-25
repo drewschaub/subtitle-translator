@@ -45,8 +45,6 @@ The range of unicode characters which are routinely used for Chinese and Japaens
 4. U+F900 - U+FAFF: CJK compatibility ideographs (Chinese, Japanese, and Korean)
 5. U+FF66 - U+FF9F: half-width katakana (Japanese only)
 
-
-
 There are multiple data formats for subtitles. This initial version supports ```.srt```, though I have other file formats planned for the future.
 
 This initial version currently only supports the paid version of DeepL, though I will add support for the non-paid version, as well as Google Translate. 
@@ -54,6 +52,7 @@ This initial version currently only supports the paid version of DeepL, though I
 ## Future Directions
 1. Incorporate use of an autotranslater, such as PyTranscriber for automatic generation of text from audiofiles.
 2. Include pre- and post-processing of subtitle files to handle nuances that arise with subtitle files, such as the use of ```♫``` and other symbols which may confuse the translator models being useds by this automation tool. 
+3. Provide option to reindex. For now it's in the config
 
 ## References
 [1] https://stackoverflow.com/questions/43418812/check-whether-a-string-contains-japanese-chinese-characters
