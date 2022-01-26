@@ -1,3 +1,8 @@
+# Copyright 2022 Andrew Schaub. All Rights Reserved.
+#
+# 
+# ==============================================================================
+""" import statements """
 import configparser
 import requests
 import time
@@ -9,6 +14,28 @@ from tracemalloc import start, stop
 from tqdm import tqdm
 
 LANG_DICT = {'EN' : 'English', 'JA' : 'Japanese', 'ZH' : 'Chinese'}
+
+class SubtitleBlock(object):
+    """ A class used to represent a subtitle block
+
+    Attributes
+    ----------
+    index : int
+        numeric counter for subtitle block indices
+    startTime : datetime
+        datetime for start of subtitle
+    stopTime : datetime
+        datetime for stop of subtitle
+    subtitleText : str
+        subtitle text to be displayed
+
+    """
+    def __init__(self, index, startTime, stopTime, subtitleText):
+        """Class method docstrings go here."""
+        self.index = index
+        self.startTime = startTime
+        self.stopTime = stopTime
+        self.subtitleText = subtitleText
 
 def detectEncoding(subtitlePath):
     with open(subtitlePath, "rb") as myfile:
@@ -128,28 +155,6 @@ def translate_core_deepl(job_configuration, inputText, deepLApiURL):
     
     return response.text
 
-class SubtitleBlock(object):
-    """ A class used to represent a subtitle block
-
-    Attributes
-    ----------
-    index : int
-        numeric counter for subtitle block indices
-    startTime : datetime
-        datetime for start of subtitle
-    stopTime : datetime
-        datetime for stop of subtitle
-    subtitleText : str
-        subtitle text to be displayed
-
-    """
-    def __init__(self, index, startTime, stopTime, subtitleText):
-        """Class method docstrings go here."""
-        self.index = index
-        self.startTime = startTime
-        self.stopTime = stopTime
-        self.subtitleText = subtitleText
-
 config = configparser.ConfigParser()
 configPath = Path('..', 'config', 'config.ini')
 config.read(configPath)
@@ -253,5 +258,3 @@ for subtitlePath in tqdm(subtitlePaths):
 
         relativeFilePath.write_text(translatedContent)
         print('Finished: {}'.format(relativeFilePath))
-
-
