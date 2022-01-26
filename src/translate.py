@@ -1,34 +1,15 @@
 import configparser
-from pathlib import Path
+import requests
+import time
+from chardet.universaldetector import UniversalDetector
 from datetime import datetime
+from multiprocessing.dummy import Pool as ThreadPool
+from pathlib import Path
 from tracemalloc import start, stop
 from tqdm import tqdm
-from chardet.universaldetector import UniversalDetector
+
 
 RGX_INDEX = r"-?[0-9]+\.?[0-9]*"
-
-def translateDeepL(job_configuration, inputText):
-    """ Translate text with DeepL
-
-    Keyword arguments:
-    job_configuration -- argument description goes here
-    inputText -- string of text to be translated
-    
-    """
-    payload = {
-        "auth_key": deeplapikey, "text": inputText, 
-        "targetLang": job_configuration['target_lang'],
-        "sourceLang": job_configuration['source_lang'], 
-        "split_sentences": job_configuration['split_sentences'],
-        "preserve_formatting": job_configuration['preserve_formatting']        
-    }
-
-    response = requests.post(deeplapiurl,
-                             data=payload,
-                             headers={'Content-Type': 
-                                      'application/x-www-form-urlencoded'})
-    
-    return response.text
 
 def detectEncoding(subtitlePath):
     with open(subtitlePath, "rb") as myfile:
@@ -59,8 +40,11 @@ def generateSubtitleBlocks(content):
         if currentState == 2:
             # If blank line detected, generate a block object
             if line in ['\n', '\r\n']:
+                replacedText = replaceText(subtitleText)
+                print(replacedText)
+
                 currentSubtitleBlock = SubtitleBlock(index, startTime,
-                                                     stopTime, subtitleText)
+                                                     stopTime, replacedText)
                 subtitleBlocks.append(currentSubtitleBlock)
 
                 # Increment state by 1 to begin looking for new index
@@ -102,6 +86,51 @@ def generateSubtitleBlocks(content):
 
     return subtitleBlocks
 
+def replaceText(text):
+    """ replace carriage-return and a few other symbols
+
+    Keyword arguments:
+    text -- str
+    
+    returns str with text replacements
+
+    """
+
+    text = text.replace("\\N", " ")
+    text = text.replace("\n", " ")
+    text = text.replace('♬', '音楽')
+    text = text.replace('☎', '[電話] ')
+
+    return text
+
+def request(text):
+    translatedText = '<<NOT ASSIGNED>>'
+    try:
+        responseText = translate_core_deepl(job_configuration, text.strip(), deepLApiURL).replace('\\', '')
+        textPrefix = len('{"translations":[{"detected_source_language":"EN","text":"')
+        translatedText = responseText[textPrefix:-4]
+        print(text, translatedText)
+    except Exception as e:
+        print(e)
+        translatedText = 'ERROR! ERROR! ERROR! TRANSLATION FAILED'
+        print(text, translatedText)
+        pass
+
+    return translatedText
+
+def translate_core_deepl(job_configuration, inputText, deepLApiURL):
+    
+    payload = {
+        "auth_key": deepLApiKey, "text": inputText, 
+        "target_lang": job_configuration['targetLang'],
+        "source_lang": job_configuration['sourceLang'], 
+        "split_sentences": job_configuration['splitSentences'],
+        "preserve_formatting": job_configuration['preserveFormatting']
+     } 
+    response = requests.post(deepLApiURL, data=payload, headers={'Content-Type': 'application/x-www-form-urlencoded'})
+    
+    return response.text
+
 class SubtitleBlock(object):
     """ A class used to represent a subtitle block
 
@@ -132,14 +161,9 @@ inputPath = Path(config['PATHS']['dataPath'], config['PATHS']['inputFolder'])
 outputPath = Path(config['PATHS']['dataPath'], config['PATHS']['outputFolder'])
 
 sourceLang = config['LANG']['sourceLang']
-targetLang = config['LANG']['sourceLang']
+targetLang = config['LANG']['targetLang']
 
-splitSentences = 1
-preserveFormatting = 0
-job_configuration = {'sourceLang' : sourceLang, 
-                     'targetLang' : targetLang,
-                     'split_sentences' : splitSentences, 
-                     'preserve_formatting' : preserveFormatting}
+translator = config['SERVICES']['translator']
 
 # Generate list of paths using recursive directory search for .srt files
 subtitlePaths = [path for path in inputPath.rglob('*.srt')]
@@ -165,9 +189,36 @@ for subtitlePath in tqdm(subtitlePaths):
         pass
 
     currentSubtitleBlocks = generateSubtitleBlocks(content)
-"""
-deepL_job_configuration = {'source_lang' : source_lang,
-                           'target_lang' : target_lang,
-                           'split_sentences' : split_sentences,
-                           'preserve_formatting' : preserve_formatting}
-"""
+
+    if translator == 'deepLPro':
+        apiAuthKeyPrompt = config['SERVICES'].getboolean('apiAuthKeyPrompt')
+        deepLApiURL = 'https://api.deepl.com/v2/translate'
+
+        if apiAuthKeyPrompt:
+            deepLApiKey = input('Enter your DeepL API Key (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx): ')
+        else:
+            deepLApiKey = config['SERVICES']['deepLApiKey']
+
+        splitSentences = 1
+        preserveFormatting = 0
+        job_configuration = {'sourceLang' : sourceLang, 
+                            'targetLang' : targetLang,
+                            'splitSentences' : splitSentences, 
+                            'preserveFormatting' : preserveFormatting}
+
+        threadCount = int(config['SERVICES']['deepLthreads'])
+        pool = ThreadPool(threadCount)
+
+        textBlocks = []
+        for subtitleBlock in currentSubtitleBlocks:
+            textBlocks.append(subtitleBlock.subtitleText)
+
+        time1 = time.time()
+        translationResults = pool.map(request, textBlocks)
+        pool.close()
+        pool.join()
+        time2 = time.time()
+
+        print("Translating %s sentences, a total of %s s"%(len(textBlocks),time2 - time1))
+
+        print(translationResults)
