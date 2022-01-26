@@ -8,8 +8,7 @@ from pathlib import Path
 from tracemalloc import start, stop
 from tqdm import tqdm
 
-
-RGX_INDEX = r"-?[0-9]+\.?[0-9]*"
+LANG_DICT = {'EN' : 'English', 'JA' : 'Japanese', 'ZH' : 'Chinese'}
 
 def detectEncoding(subtitlePath):
     with open(subtitlePath, "rb") as myfile:
@@ -41,7 +40,6 @@ def generateSubtitleBlocks(content):
             # If blank line detected, generate a block object
             if line in ['\n', '\r\n']:
                 replacedText = replaceText(subtitleText)
-                print(replacedText)
 
                 currentSubtitleBlock = SubtitleBlock(index, startTime,
                                                      stopTime, replacedText)
@@ -109,11 +107,10 @@ def request(text):
         responseText = translate_core_deepl(job_configuration, text.strip(), deepLApiURL).replace('\\', '')
         textPrefix = len('{"translations":[{"detected_source_language":"EN","text":"')
         translatedText = responseText[textPrefix:-4]
-        print(text, translatedText)
     except Exception as e:
         print(e)
         translatedText = 'ERROR! ERROR! ERROR! TRANSLATION FAILED'
-        print(text, translatedText)
+        print('ERROR! Translation failed for: {}'.format(text))
         pass
 
     return translatedText
@@ -170,11 +167,20 @@ subtitlePaths = [path for path in inputPath.rglob('*.srt')]
 print('Detected the following subtitlefiles: ')
 for path in subtitlePaths:
     rootPathLength = len(config['PATHS']['dataPath']) + 1
-    print(str(path)[rootPathLength:])
-print('\n')
+    print('  {}'.format(str(path)[rootPathLength:]))
+print('')
 
 for subtitlePath in tqdm(subtitlePaths):
+    # Generate path of translated subtitle file
+    relativeFilePathString = str(subtitlePath)[len(str(inputPath)) + 1:]
+    relativeFilePathString = relativeFilePathString.replace(LANG_DICT[sourceLang], LANG_DICT[targetLang])
+    relativeFilePath = Path(outputPath, relativeFilePathString)
 
+    # If paths don't exist call mkdir and make the directories
+    relativeFileParentPath = Path(outputPath, relativeFilePath).parents[0]
+    relativeFileParentPath.mkdir(parents=True, exist_ok=True)
+
+    # Detect encoding of subtitle file
     encoding = detectEncoding(subtitlePath)
 
     print(encoding, subtitlePath)
@@ -219,6 +225,33 @@ for subtitlePath in tqdm(subtitlePaths):
         pool.join()
         time2 = time.time()
 
-        print("Translating %s sentences, a total of %s s"%(len(textBlocks),time2 - time1))
+        print("Translating %s subtitle elements, a total of %s s"%(len(textBlocks),time2 - time1))
 
-        print(translationResults)
+        counter = 0
+        translatedText = ''
+
+        translatedContent = ''
+
+        for subtitleBlock in currentSubtitleBlocks:
+            # Part 1 - index
+            reindex = config['FILE-OPTIONS'].getboolean('reindex')
+            if reindex:
+                index = counter + 1
+            else:
+                index = subtitleBlock.index
+
+            # Part 2 - timestamps
+            timestampLine = subtitleBlock.startTime + ' --> ' + subtitleBlock.stopTime
+
+            # Part 3 - subtitle text (translated)
+            translatedText = translationResults[counter]
+
+            newTranslatedBlock = '{}\n{}\n{}\n\n'.format(str(index), timestampLine, translatedText)
+            translatedContent = translatedContent + newTranslatedBlock
+
+            counter = counter + 1
+
+        relativeFilePath.write_text(translatedContent)
+        print('Finished: {}'.format(relativeFilePath))
+
+
